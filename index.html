@@ -1,0 +1,315 @@
+<html>
+    <head>
+        <meta property="og:title"               content="Minimalist life calendar" />
+        <meta property="og:site_name"           content="Count Life" />
+        <meta property="og:url"                 content="http://count.life" />
+        <meta property="og:description"         content="Shows the number of weeks you've lived and the number of weeks
+                                                            you have left. Makes a great homepage." />
+        <meta property="og:image"               content="http://count.life/img/share.png" />
+        <meta property="og:image:type"          content="image/png" />
+        <meta property="og:image:width"         content="1200" />
+        <meta property="og:image:height"        content="630" />
+
+        <meta name="description"                content="A life calendar that shows the number of weeks you've lived and
+                                                        the number of weeks you have left." />
+
+
+        <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/kjfoeanakflmmidmcdpobdpknmdcdlao">
+
+        <link href='http://fonts.googleapis.com/css?family=Roboto+Slab' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+
+        <title>Count Life - Minimalist life calendar</title>
+        <style type="text/css">
+            body {
+                padding: 0;
+                margin: 0;
+                position: relative;
+                font-family: 'Roboto', sans-serif;
+
+                background-size: cover;
+            }
+
+            a, a:visited {
+                color: #70BCF9;
+            }
+
+            table {
+                width: 100%;
+                height: 100%;
+            }
+
+            table, td {
+                border: 1px solid #70B5ED;
+                border-collapse: collapse;
+                padding: 0;
+                margin: 0;
+            }
+
+            td {
+            }
+
+            tr.previous td, tr.current td.partial {
+                background-color: #333333;
+            }
+
+            tr.current td, tr.future td {
+            }
+
+            div#clock {
+                display: none;
+
+                position: absolute;
+                top: 8.0vh;
+                width: 100%;
+                text-align: center;
+                font-family: 'Roboto', sans-serif;
+                font-size: 5.0vw;
+                color: #222222;
+            }
+
+            div#welcome {
+                display: none;
+
+                width: 50vw;
+                margin: 8vh auto 0;
+            }
+
+            div#welcome h1 {
+                text-align: center;
+                text-transform: uppercase;
+                font-family: 'Roboto Slab', serif;
+                font-size: 4em;
+            }
+            div#welcome form {
+                border: 1px solid #999999;
+                padding: 10px 20px;
+            }
+
+            div#welcome .settings {
+                margin-left: 5px;
+                padding: 5px;
+            }
+
+            div#welcome div#footer #by a {
+                color: #e6e6e6;
+            }
+
+            div#welcome div#footer {
+                text-align: center;
+                padding-top: 20px;
+            }
+
+            #settingsForm span.unhappyMessage {
+                font-size: 0.8em;
+                padding-left: 10px;
+            }
+
+            td {
+                border-color: #FFFFFF;
+            }
+
+            table {
+                border-color: #FFFFFF;
+            }
+
+            tr.previous td {
+                background-color: #DEDEDE
+            }
+
+            tr.current td.partial {
+                background-color: #DEDEDE
+            }
+
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+        <script src="js/underscore-min.js"></script>
+        <script src="js/jqClock.js"></script>
+        <script src="js/happy.js"></script>
+
+        <script type="text/javascript">
+            $( document ).ready(function() {
+
+                $( "#get-extension" ).click(function(event) {
+                    event.preventDefault();
+                    chrome.webstore.install();
+                })
+
+                var birthdayPattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+                var lifespanPattern = /^[0-9]{1,3}$/;
+
+                function validateBirthday(birthday) {
+                    return birthdayPattern.test( $("#birthday").val());
+                }
+
+                function validateLifespan(lifespan) {
+                    return lifespanPattern.test( $("#lifespan").val());
+                }
+
+                $( "#settingsForm" ).isHappy({
+                    fields: {
+                      '#birthday': {
+                        required: true,
+                        test: validateBirthday,
+                        message: 'Please enter your birthday (like YYYY-MM-DD).'
+                      },
+                      '#lifespan': {
+                        required: true,
+                        test: validateLifespan,
+                        message: 'Please enter your expected lifespan (like 81)'
+                      }
+                    }
+                  });
+
+                // Read a page's GET URL variables and return them as an associative array.
+                // From http://jquery-howto.blogspot.ca/2009/09/get-url-parameters-values-with-jquery.html
+                function getQSParams()
+                {
+                    var vars = [], hash;
+                    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+                    for(var i = 0; i < hashes.length; i++)
+                    {
+                        hash = hashes[i].split('=');
+                        vars.push(hash[0]);
+                        vars[hash[0]] = hash[1];
+                    }
+                    return vars;
+                }
+
+                function isLeapYear(year) {
+                    var d = new Date(year, 1, 28);
+                    d.setDate(d.getDate() + 1);
+                    return d.getMonth() == 1;
+                }
+
+                function getAge(date) {
+                    var d = new Date(date), now = new Date();
+                    var years = now.getFullYear() - d.getFullYear();
+                    d.setFullYear(d.getFullYear() + years);
+                    if (d > now) {
+                        years--;
+                        d.setFullYear(d.getFullYear() - 1);
+                    }
+                    var days = (now.getTime() - d.getTime()) / (3600 * 24 * 1000);
+                    return years + days / (isLeapYear(now.getFullYear()) ? 366 : 365);
+                }
+
+                QSParams = getQSParams();
+
+                if(!("birthday" in QSParams) | !("lifespan" in QSParams)) {
+                    // Show the form
+                    $("#welcome").css("display", "block");
+
+                    // Give the first field focus
+                    $( "#birthday" ).focus();
+                    return;
+                }
+
+                $( "body" ).append( '<table id="calendar"></table>' );
+
+                var birthday = QSParams["birthday"];
+                var birthdayString = birthday + "T12:00:00";
+                var birthdayDate = new Date(birthdayString);
+
+                var lifespan = QSParams["lifespan"];
+
+                var age = getAge(birthdayDate);
+                var ageYears = Math.floor(age);
+                var remainder = age - ageYears;
+
+                var previousYears = (ageYears).toFixed(0);
+
+                if( lifespan > ageYears) {
+                    var futureYears = lifespan - ageYears - 1;
+                    var remainderWeeks = Math.floor(remainder * 52);
+                    var restOfYearWeeks = Math.ceil(52 - remainderWeeks);
+                } else {
+                    var futureYears = 0;
+                    var remainderWeeks = 52;
+                    var restOfYearWeeks = 0;
+                }
+
+                var year = "<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+
+                // Show a clock
+                if( QSParams["showClock"] != "false") {
+                    $( "#clock" ).css( "display", "block");
+                    $( "#clock" ).clock();
+                }
+
+                window.onload = function () {
+
+                    // Fill in lived years
+                    _(previousYears).times( function() {
+                        $( "#calendar" ).append( '<tr class="previous">' + year + '</tr>' );
+                    })
+
+                    // Fill in the current birth-year (the number of weeks elapsed since the most recent birthday.)
+                    $( "#calendar" ).append( '<tr class="current"></tr>' );
+                    _(remainderWeeks).times( function() {
+                        $( "#calendar .current" ).append( '<td class="partial"></td>' );
+                    })
+                    _(restOfYearWeeks).times( function() {
+                        $( "#calendar .current" ).append( '<td></td>' );
+                    })
+
+                    // Fill in future years
+                    _(futureYears).times( function() {
+                        $( "#calendar" ).append( '<tr class="future">' + year + '</tr>' );
+                    })
+
+                    background = QSParams["background"]
+
+                    backgroundImageAttr = "url('img/" + background + ".jpg')";
+                    $("body").css("background-image", backgroundImageAttr);
+
+                }
+            });
+        </script>
+    </head>
+    <body>
+        <div id="clock"></div>
+        <div id="welcome">
+            <h1>Count Life</h1>
+            <p>
+                A minimalist life calendar. Shows the number of weeks you've lived and the number of weeks you
+                have left. Makes a great homepage.
+            </p>
+            <form method="get" action="" id="settingsForm">
+                <input type="hidden" name="showClock" id="showClock" value="true" />
+                <p>
+                    <label for="birthday">Birthday:
+                        <input class="settings" id="birthday" name="birthday" placeholder="1996-08-27"/>
+                    </label>
+                </p>
+                <p>
+                    <label for="lifespan"><a href="https://www.wolframalpha.com/input/?i=life+expectancy+India" target="_blank">Life expectancy</a>:
+                        <input class="settings" id="lifespan" name="lifespan" placeholder="81"/>
+                    </label>
+                </p>
+                <p>
+                    <label for="background">Background color:
+                        <select class="settings" id="background" name="background">
+                            <option value="orange">Orange</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="purple">Purple</option>
+                            <option value="red">Red</option>
+                        </select>
+                    </label>
+                </p>
+
+                <p>
+                    <input type="submit" id="submit" value="Show calendar" />
+                </p>
+            </form>
+            <p><em>
+                You can bookmark the next page to save your calendar.
+            </em></p>
+            <div id="footer">
+                <p id="by">
+                    <a href="https://ankitpandey2708.github.io/life">Made by</a>
+                </p>
+        </div>
+    </body>
+</html>
